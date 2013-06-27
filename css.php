@@ -1,17 +1,26 @@
 <?php
 
+/**
+ * Global Functions
+ * - these are available to call directly outside of a class scope
+ */  
+# A simple Array to Object conversion using PHP's built in JSON functionality
+function array_to_object( $arr ) {
+	return json_decode( json_encode($arr) );
+}
+
+
 class CSS {
 	
-	protected $rule_blocks_reference;
-	public $rule_blocks;
+	public $stylesheet;
 	
 	public function __construct() {
-		$this->rule_blocks_reference = array();
-		$this->rule_blocks = array();
+		$this->stylesheet = new CSS_Stylesheet();
 		# $this->rule_blocks = new stdClass();
 		# then... $this->rule_blocks->wrapper->header->_rules = array(rule1, rule2);
 		# ...but this doesn't allow for 'names' to begin with '#' or '.'!!				
 	}
+	
 	
 	protected function is_valid_selector( $selector ) {
 		if( empty($selector) || !is_string($selector) )
@@ -21,6 +30,7 @@ class CSS {
 			return true;
 		# else throw error "invalid selector"
 	}
+	
 	
 	public function new_rule_block( $selector ) {
 		# check selector is valid
@@ -33,23 +43,21 @@ class CSS {
         
         ## split selector string
 		# - first separate at commas (if present)
-		if( strpos($step, ',') ) {
+		if( strpos($selector, ',') ) {
 			$selectors = explode(',', $selector);	
 		}
 		
 		# - then at spaces (if present)
-        if( strstr($selector, ' ') ) {
-        	# if multiple selectors present (from commas)
-        	if( !empty($selectors) ) {
-        		foreach( $selectors as $sel ) {
-					$sel = explode(' ', $sel);
-				}
-			}
-			else
-				$selectors = explode(' ', $selector);
+		# (remeber to check if multiple selectors exist from the comma split)
+		if( empty($selectors) ) {
+			$selectors = explode(' ', $selector);
+			
+		}
+		else {
+			# handle multiple selectors from comma split here...
+			
 		}
 		
-		return new CSSRuleBlock();
 	}
 	
 	
@@ -62,16 +70,66 @@ class CSS {
 		
 	}
 	
-	private function create_rule_object( $selector ) {
-		$new_rule_block = new CSSRuleBlock();
-		$nrb = $this->rule_blocks[] = $new_rule_block;
-		
-		// set up reference
-		
-		end($nrb);
-		$this->rule_blocks_reference[key($nrb)] = $selector;
-		reset($nrb);
+	private function create_selector( $selector ) {
+		if( is_string($selector) ) {
+			if( !strpos($selector, ',') ) {
+				if( !strpos($selector, ' ') )
+					return new CSSRuleBlock($selector);
+				else
+					throw new Exception('Selector string contains spaces!');
+			}
+			else
+				throw new Exception('Multiple, comma separated selectors detected!');
+		}
+		else throw new Exception('Selector is not of type <em>string</em>!');
 	}
+	
+	
+	private function create_nested_selectors( $selectors ) {
+		if( !is_array($selectors) )
+			throw new Exception('Nested selectors not an array!');
+		
+		if( count($selectors) > 1 ) {
+			$styles = array();
+			$rules = array('_rules', '');
+			
+			while( !empty($selectors) ) {
+				
+				if( !empty($styles) ) {
+					$selector = array_pop($selectors);
+					$data = $styles;
+					$styles = array_merge( array($selector => $data), $rules );
+				}
+				
+				else {
+					$selector = array_pop($selectors);
+					$styles[$selector] = $rules;
+				}
+				
+			}
+			
+			$this->stylesheet->styles = array_to_object($styles);
+			
+		}
+		else {
+			$selector = $selectors[0];
+			$this->stylesheet->styles = (object) array( $selector => $rules);
+		}
+	}
+	
+}
+
+
+class CSS_Stylesheet extends CSS {
+	
+	public $charset;
+	public $styles;
+	
+	protected function __construct( $charset = 'UTF-8'  ) {
+		$this->charset = $charset;
+		$this->styles = array();
+	}
+	
 }
 
 
@@ -80,9 +138,9 @@ class CSSRuleBlock extends CSS {
 	public $selector;
 	public $_rules;
 	
-	protected function __construct( $selector ) {
-		$this->_rules = array();
+	protected function __construct( $selector, $rules = array('_rules', '') ) {
 		$this->selector = $selector;
+		$this->_rules = $rules;
 	}
 	
 	
