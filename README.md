@@ -1,3 +1,5 @@
+!!! ARCHIVED: whilst the idea had potential way back then I clearly didn't have the expertise. There are now much better methods and libraries to assist (plus Defvs really embraced the tools n0de and other platforms provided to complie and automate certain parts of the process ... who knew) !!!
+
 # OOPSS
 ## stands for Object-Oriented PHP Stylesheets
 
